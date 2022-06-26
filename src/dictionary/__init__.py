@@ -8,5 +8,3 @@ Modules
 
     ~main
 """
-
-__all__ = ["main, file_ops"]

@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 import logging
 import re
 from typing import Any, Literal
@@ -37,28 +39,28 @@ class Dictionary(dict):
         file_content: dict[str, Any]
         path_details = Path(path)
 
-        if not path_details.exists():
-            file_content = file_ops.new(title, author, description)
-        else:
+        if path_details.exists():
             if not path_details.is_file():
                 raise FileNotFoundError
             file_content = file_ops.read_json(path)
+        else:
+            file_content = file_ops.new(title, author, description)
 
         assert isinstance(file_content, dict)
         for key in file_content:
             value = file_content[key]
             assert isinstance(key, str)
-            assert isinstance(value, str) or isinstance(value, dict)
+            assert isinstance(value, (str, dict))
 
         self.__title: str = file_content.pop("title")
         self.__author: str = file_content.pop("author")
         self.__description: str = file_content.pop("description")
         self.__revision_date: str = file_content.pop("revision_date")
-        self.__path: str = path
+        self.__path = path
 
         super().__init__(file_content["contents"])
 
-        self.__edited: bool = False
+        self.__edited = False
 
         file_ops.config_log(path)
 
@@ -66,7 +68,6 @@ class Dictionary(dict):
             logging.info(f"Created new dictionary {path_details.parts[-1]}.")
 
         logging.info(f"Initialized {path}.")
-        return None
 
     def __delitem__(self, __v: str) -> None:
         """An invalidation of the inherited ``__delitem__`` method to
@@ -124,14 +125,13 @@ class Dictionary(dict):
         dict[str, Any]
             The entire dictionary data into a ``dict``.
         """
-        return_value: dict[str, Any] = {
+        return {
             "title": self.title,
             "author": self.author,
             "description": self.description,
             "revision_date": self.revision_date,
             "contents": self,
         }
-        return return_value
 
     def save(self) -> None:
         """Saves the dictionary to its associated file, if it was edited."""
@@ -140,7 +140,6 @@ class Dictionary(dict):
             file_ops.save_all_to_file(self._convert_to_dict(), self.path)
         self.__edited = False
         logging.info(f"Saved {Path(self.path).parts[-1]}.")
-        return None
 
     def definition_of(self, keyword: str) -> list[str] | None:
         """Returns the list of definitions for a given keyword, if it exists.
@@ -158,10 +157,9 @@ class Dictionary(dict):
         if keyword in self:
             __definition_list: list[str] = self[keyword]["definitions"]
             assert isinstance(__definition_list, list)
-            assert (isinstance(i, str) for i in __definition_list)
+            assert all(isinstance(i, str) for i in __definition_list)
             return self[keyword]["definitions"]
-        else:
-            return None
+        return None
 
     def add(
         self,
@@ -202,14 +200,13 @@ class Dictionary(dict):
             if reference:
                 self["keyword"]["references"].append(reference)
                 logging.info(
-                    f"Added the reference '{reference}' to the keyword"
-                    f" '{keyword}'."
+                    f"Added the reference '{reference}' to the keyword" f" '{keyword}'."
                 )
 
         else:
-            new_definitions: list[str] = [definition] if definition else []
-            new_references: list[str] = [reference] if reference else []
-            new_entry: dict[str, Any] = {
+            new_definitions = [definition] if definition else []
+            new_references = [reference] if reference else []
+            new_entry: dict[str, bool | list[str]] = {
                 "case_sensitive": case_sensitive,
                 "definitions": new_definitions,
                 "references": new_references,
@@ -226,11 +223,7 @@ class Dictionary(dict):
 
         self.__edited = True
 
-        return None
-
-    def remove(
-        self, keyword: str, definition: str = "", reference: str = ""
-    ) -> None:
+    def remove(self, keyword: str, definition: str = "", reference: str = "") -> None:
         """Removes content from the dictionary.
 
         If both definition and reference passed are blank, the keyword itself
@@ -252,18 +245,16 @@ class Dictionary(dict):
             Raised if the content passed is nonexistent.
         """
         if keyword in self:
-            if definition or reference:
-                if definition:
-                    if definition in self[keyword]["definitions"]:
-                        self[keyword]["definitions"].remove(definition)
-                    else:
-                        raise ValueError("Given definition not found")
-
-                if reference:
-                    if reference in self[keyword]["references"]:
-                        self[keyword]["references"].remove(reference)
-                    else:
-                        raise ValueError("Given reference not found")
+            if definition:
+                if definition in self[keyword]["definitions"]:
+                    self[keyword]["definitions"].remove(definition)
+                else:
+                    raise ValueError("Given definition not found")
+            elif reference:
+                if reference in self[keyword]["references"]:
+                    self[keyword]["references"].remove(reference)
+                else:
+                    raise ValueError("Given reference not found")
             else:
                 __new_copy: dict[str, Any] = dict(self)
                 del __new_copy[keyword]
@@ -271,7 +262,6 @@ class Dictionary(dict):
             self.__edited = True
         else:
             raise ValueError("Nonexistent entry to be removed")
-        return None
 
     def search(
         self,
@@ -281,60 +271,48 @@ class Dictionary(dict):
         max_results: int = 5,
     ) -> list[tuple[str, int]] | None:
 
-        search_result: list[tuple[str, int]] | None
+        search_result: list[tuple[str, int]] | None = None
 
         if max_results < 1:
             raise ValueError("Invalid number of maximum results")
-        if len(self) < 1:
+        if not self:
             return None
 
         if mode == "exact":
-            matched: bool = False
             if case_sensitive:
                 if keyword in self:
                     search_result = [(keyword, 0)]
-                    matched = True
             else:
                 for key in self:
                     if key.lower() == keyword:
                         search_result = [(key, 0)]
-                        matched = True
                         break
-
-            if not matched:
-                search_result = None
 
         elif mode == "substr":
             regex_pattern = keyword if case_sensitive else f"(?i){keyword}"
-            regex = re.compile(regex_pattern, re.IGNORECASE)
+            regex = re.compile(regex_pattern)
 
             temp_list: list[tuple[str, int]] = []
             for key in self:
                 if regex.search(key) is not None:
-                    temp_list.append(
-                        (key, damerau_levenshtein_distance(keyword, key))
-                    )
-            if temp_list:
-                temp_list.sort(key=lambda t: t[1])
-                search_result = temp_list[0 : max_results + 1]
+                    temp_list.append((key, damerau_levenshtein_distance(keyword, key)))
+            temp_list.sort(key=lambda t: t[1])
+            search_result = temp_list[: max_results + 1]
 
         elif mode == "approx":
             search_result = []
-            if case_sensitive:
-                for key in self:
-                    search_result.append(
-                        (key, damerau_levenshtein_distance(keyword, key))
-                    )
-            else:
+            if not case_sensitive:
                 keyword = keyword.lower()
-                for key in self:
-                    search_result.append(
-                        (
-                            key,
-                            damerau_levenshtein_distance(keyword, key.lower()),
-                        )
+            for key in self:
+                search_result.append(
+                    (
+                        key,
+                        damerau_levenshtein_distance(
+                            keyword, key if case_sensitive else key.lower()
+                        ),
                     )
+                )
             search_result.sort(key=lambda t: t[1])
-            search_result = search_result[0 : max_results + 1]
+            search_result = search_result[: max_results + 1]
 
         return search_result
