@@ -1,18 +1,11 @@
+from __future__ import annotations
+
 import json
 import logging
-from datetime import datetime
+from datetime import date as date_, datetime
 from pathlib import Path
 
 from typing import Any
-
-__all__ = [
-    "NotADictionaryError",
-    "new",
-    "validate_dict",
-    "read_json",
-    "save_all_to_file",
-    "config_log",
-]
 
 
 class NotADictionaryError(Exception):
@@ -48,14 +41,13 @@ def new(
         types are ``str`` or ``dict``.
     """
 
-    return_value = {
+    return {
         "title": title,
         "author": author,
         "description": description,
-        "revision_date": str(datetime.date(datetime.now())),
+        "revision_date": str(date_.today()),
         "contents": {},
     }
-    return return_value
 
 
 def validate_dict(content: dict[str, Any]) -> bool:
@@ -73,11 +65,11 @@ def validate_dict(content: dict[str, Any]) -> bool:
     """
 
     __key_list = list(content.keys())
-    for key in ["title", "author", "description", "revision_date", "contents"]:
-        if not (key in __key_list):
+    for key in ("title", "author", "description", "revision_date", "contents"):
+        if key not in __key_list:
             return False
         __key_list.remove(key)
-    return False if len(__key_list) > 0 else True
+    return not __key_list
 
 
 def read_json(path: str) -> dict[str, Any]:
@@ -101,17 +93,15 @@ def read_json(path: str) -> dict[str, Any]:
     NotADictionaryError
         Raised when the file cannot be parsed as a dictionary.
     """
-    file_contents: dict[str, Any]
     file_path = Path(path)
 
     if not file_path.exists:
         raise FileNotFoundError
 
-    with open(path, "r") as f:
-        contents = f.read()
-        file_contents = json.loads(contents)
+    with open(path) as f:
+        file_contents: dict[str, Any] = json.load(f)
 
-        if not (validate_dict(file_contents)):
+        if not validate_dict(file_contents):
             raise NotADictionaryError(
                 path, "JSON content invalid to be dictionary"
             )
@@ -133,8 +123,7 @@ def save_all_to_file(content: dict[str, Any], path: str) -> None:
         The path of the JSON file.
     """
     with open(path, "w") as f:
-        f.write(json.dumps(content, indent=4, sort_keys=True))
-    return None
+        json.dump(content, f, indent=4, sort_keys=True)
 
 
 def config_log(path: str) -> None:
@@ -157,8 +146,6 @@ def config_log(path: str) -> None:
         level=logging.DEBUG,
     )
 
-    return None
-
 
 def date() -> str:
     """Returns the current date.
@@ -166,9 +153,9 @@ def date() -> str:
     Returns
     -------
     str
-        The string representation of ``datetime.now().date()``.
+        The string representation of ``date.today()``.
     """
-    return datetime.now().date().__str__()
+    return str(date_.today())
 
 
 def time() -> str:
