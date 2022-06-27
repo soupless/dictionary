@@ -155,9 +155,9 @@ class Dictionary(dict):
             The list of the definitions if the keyword exists, otherwise None
         """
         if keyword in self:
-            __definition_list: list[str] = self[keyword]["definitions"]
-            assert isinstance(__definition_list, list)
-            assert all(isinstance(i, str) for i in __definition_list)
+            definition_list: list[str] = self[keyword]["definitions"]
+            assert isinstance(definition_list, list)
+            assert all(isinstance(i, str) for i in definition_list)
             return self[keyword]["definitions"]
         return None
 
@@ -200,7 +200,8 @@ class Dictionary(dict):
             if reference:
                 self["keyword"]["references"].append(reference)
                 logging.info(
-                    f"Added the reference '{reference}' to the keyword" f" '{keyword}'."
+                    f"Added the reference '{reference}' to the keyword"
+                    f" '{keyword}'."
                 )
 
         else:
@@ -223,7 +224,9 @@ class Dictionary(dict):
 
         self.__edited = True
 
-    def remove(self, keyword: str, definition: str = "", reference: str = "") -> None:
+    def remove(
+        self, keyword: str, definition: str = "", reference: str = ""
+    ) -> None:
         """Removes content from the dictionary.
 
         If both definition and reference passed are blank, the keyword itself
@@ -295,7 +298,9 @@ class Dictionary(dict):
             temp_list: list[tuple[str, int]] = []
             for key in self:
                 if regex.search(key) is not None:
-                    temp_list.append((key, damerau_levenshtein_distance(keyword, key)))
+                    temp_list.append(
+                        (key, damerau_levenshtein_distance(keyword, key))
+                    )
             temp_list.sort(key=lambda t: t[1])
             search_result = temp_list[: max_results + 1]
 

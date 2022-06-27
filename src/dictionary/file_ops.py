@@ -64,12 +64,12 @@ def validate_dict(content: dict[str, Any]) -> bool:
         Returns ``True`` if it is a dictionary, and is ``False`` otherwise
     """
 
-    __key_list = list(content.keys())
+    key_list = list(content.keys())
     for key in ("title", "author", "description", "revision_date", "contents"):
-        if key not in __key_list:
+        if key not in key_list:
             return False
-        __key_list.remove(key)
-    return not __key_list
+        key_list.remove(key)
+    return not key_list
 
 
 def read_json(path: str) -> dict[str, Any]:
