@@ -19,9 +19,7 @@ class NotADictionaryError(Exception):
         super().__init__(self.message)
 
 
-def new(
-    title: str = "", author: str = "", description: str = ""
-) -> dict[str, Any]:
+def new(title: str = "", author: str = "", description: str = "") -> dict[str, str | dict]:
     """Return a new dictionary.
 
     Parameters
@@ -35,10 +33,7 @@ def new(
 
     Returns
     -------
-    dict[str, Any]
-        The function returns a ``dict`` object with string keys and ``Any``
-        values. Although ``Any`` is the type of the values, the only possible
-        types are ``str`` or ``dict``.
+    dict[str, str | dict]
     """
 
     return {
@@ -64,12 +59,8 @@ def validate_dict(content: dict[str, Any]) -> bool:
         Returns ``True`` if it is a dictionary, and is ``False`` otherwise
     """
 
-    key_list = list(content.keys())
-    for key in ("title", "author", "description", "revision_date", "contents"):
-        if key not in key_list:
-            return False
-        key_list.remove(key)
-    return not key_list
+    VALID_KEYS = {"title", "author", "description", "revision_date", "contents"}
+    return all(key in VALID_KEYS for key in content.keys())
 
 
 def read_json(path: str) -> dict[str, Any]:
@@ -102,9 +93,7 @@ def read_json(path: str) -> dict[str, Any]:
         file_contents: dict[str, Any] = json.load(f)
 
         if not validate_dict(file_contents):
-            raise NotADictionaryError(
-                path, "JSON content invalid to be dictionary"
-            )
+            raise NotADictionaryError(path, "JSON content invalid to be dictionary")
 
     return file_contents
 
@@ -135,12 +124,8 @@ def config_log(path: str) -> None:
         The path of the dictionary file.
     """
 
-    file_details = Path(path)
-    file_name = file_details.stem
-    file_dir = str(file_details.parent)
-
     logging.basicConfig(
-        filename=f"{file_dir}\\{file_name}.log",
+        filename=Path(path).with_suffix(".log"),
         format="[%(asctime)s] [%(levelname)s] %(message)s",
         datefmt="%m/%d/%Y %I:%M:%S %p",
         level=logging.DEBUG,

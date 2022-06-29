@@ -1,15 +1,20 @@
 from __future__ import annotations
+from enum import Enum
 
 import logging
 import re
-from typing import Any, Literal
+from typing import Any
 from pathlib import Path
 
 from jellyfish import damerau_levenshtein_distance
 
 from . import file_ops
 
-SEARCH_MODE = Literal["exact", "substr", "approx"]
+
+class SearchMode(Enum):
+    Exact = 0
+    SubStr = 1
+    Approx = 2
 
 
 class Dictionary(dict):
@@ -46,9 +51,7 @@ class Dictionary(dict):
         else:
             file_content = file_ops.new(title, author, description)
 
-        assert isinstance(file_content, dict)
-        for key in file_content:
-            value = file_content[key]
+        for key, value in file_content.items():
             assert isinstance(key, str)
             assert isinstance(value, (str, dict))
 
@@ -155,9 +158,6 @@ class Dictionary(dict):
             The list of the definitions if the keyword exists, otherwise None
         """
         if keyword in self:
-            definition_list: list[str] = self[keyword]["definitions"]
-            assert isinstance(definition_list, list)
-            assert all(isinstance(i, str) for i in definition_list)
             return self[keyword]["definitions"]
         return None
 
@@ -200,8 +200,7 @@ class Dictionary(dict):
             if reference:
                 self["keyword"]["references"].append(reference)
                 logging.info(
-                    f"Added the reference '{reference}' to the keyword"
-                    f" '{keyword}'."
+                    f"Added the reference '{reference}' to the keyword" f" '{keyword}'."
                 )
 
         else:
@@ -224,9 +223,7 @@ class Dictionary(dict):
 
         self.__edited = True
 
-    def remove(
-        self, keyword: str, definition: str = "", reference: str = ""
-    ) -> None:
+    def remove(self, keyword: str, definition: str = "", reference: str = "") -> None:
         """Removes content from the dictionary.
 
         If both definition and reference passed are blank, the keyword itself
@@ -247,30 +244,29 @@ class Dictionary(dict):
         ValueError
             Raised if the content passed is nonexistent.
         """
-        if keyword in self:
-            if definition:
-                if definition in self[keyword]["definitions"]:
-                    self[keyword]["definitions"].remove(definition)
-                else:
-                    raise ValueError("Given definition not found")
-            elif reference:
-                if reference in self[keyword]["references"]:
-                    self[keyword]["references"].remove(reference)
-                else:
-                    raise ValueError("Given reference not found")
-            else:
-                __new_copy: dict[str, Any] = dict(self)
-                del __new_copy[keyword]
-                super().__init__(__new_copy)
-            self.__edited = True
-        else:
+        if keyword not in self:
             raise ValueError("Nonexistent entry to be removed")
+
+        if definition:
+            if definition in self[keyword]["definitions"]:
+                self[keyword]["definitions"].remove(definition)
+            else:
+                raise ValueError("Given definition not found")
+        elif reference:
+            if reference in self[keyword]["references"]:
+                self[keyword]["references"].remove(reference)
+            else:
+                raise ValueError("Given reference not found")
+        else:
+            super().__delitem__(keyword)
+
+        self.__edited = True
 
     def search(
         self,
         keyword: str,
         case_sensitive: bool = False,
-        mode: SEARCH_MODE = "approx",
+        mode: SearchMode = SearchMode.Approx,
         max_results: int = 5,
     ) -> list[tuple[str, int]] | None:
 
@@ -281,43 +277,33 @@ class Dictionary(dict):
         if not self:
             return None
 
-        if mode == "exact":
-            if case_sensitive:
-                if keyword in self:
-                    search_result = [(keyword, 0)]
-            else:
-                for key in self:
-                    if key.lower() == keyword:
-                        search_result = [(key, 0)]
-                        break
+        keyword = keyword if case_sensitive else keyword.lower()
 
-        elif mode == "substr":
-            regex_pattern = keyword if case_sensitive else f"(?i){keyword}"
-            regex = re.compile(regex_pattern)
+        if mode == SearchMode.Exact:
+            if keyword in (self if case_sensitive else map(str.lower, self)):
+                return [(keyword, 0)]
 
-            temp_list: list[tuple[str, int]] = []
-            for key in self:
-                if regex.search(key) is not None:
-                    temp_list.append(
-                        (key, damerau_levenshtein_distance(keyword, key))
-                    )
-            temp_list.sort(key=lambda t: t[1])
-            search_result = temp_list[: max_results + 1]
+        elif mode == SearchMode.SubStr:
+            regex = re.compile(keyword if case_sensitive else f"(?i){keyword}")
 
-        elif mode == "approx":
-            search_result = []
-            if not case_sensitive:
-                keyword = keyword.lower()
-            for key in self:
-                search_result.append(
-                    (
-                        key,
-                        damerau_levenshtein_distance(
-                            keyword, key if case_sensitive else key.lower()
-                        ),
-                    )
+            search_result = [
+                (key, damerau_levenshtein_distance(keyword, key))
+                for key in self
+                if regex.search(key)
+            ][: max_results + 1]
+
+        elif mode == SearchMode.Approx:
+            search_result = [
+                (
+                    key,
+                    damerau_levenshtein_distance(
+                        keyword, key if case_sensitive else key.lower()
+                    ),
                 )
+                for key in self
+            ][: max_results + 1]
+
+        if search_result is not None:
             search_result.sort(key=lambda t: t[1])
-            search_result = search_result[: max_results + 1]
 
         return search_result

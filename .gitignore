@@ -3,3 +3,5 @@ build
 .mypy_cache
 src/dictionary.egg-info/
 src/dictionary/__pycache__/
+test
+.vscode
