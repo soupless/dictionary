@@ -19,7 +19,9 @@ class NotADictionaryError(Exception):
         super().__init__(self.message)
 
 
-def new(title: str = "", author: str = "", description: str = "") -> dict[str, str | dict]:
+def new(
+    title: str = "", author: str = "", description: str = ""
+) -> dict[str, str | dict]:
     """Return a new dictionary.
 
     Parameters
@@ -59,8 +61,16 @@ def validate_dict(content: dict[str, Any]) -> bool:
         Returns ``True`` if it is a dictionary, and is ``False`` otherwise
     """
 
-    VALID_KEYS = {"title", "author", "description", "revision_date", "contents"}
-    return all(key in VALID_KEYS for key in content.keys())
+    VALID_KEYS = {
+        "title",
+        "author",
+        "description",
+        "revision_date",
+        "contents",
+    }
+    return all(key in VALID_KEYS for key in content.keys()) and all(
+        key in content.keys() for key in VALID_KEYS
+    )
 
 
 def read_json(path: str) -> dict[str, Any]:
@@ -86,14 +96,16 @@ def read_json(path: str) -> dict[str, Any]:
     """
     file_path = Path(path)
 
-    if not file_path.exists:
+    if not file_path.exists():
         raise FileNotFoundError
 
     with open(path) as f:
         file_contents: dict[str, Any] = json.load(f)
 
         if not validate_dict(file_contents):
-            raise NotADictionaryError(path, "JSON content invalid to be dictionary")
+            raise NotADictionaryError(
+                path, "JSON content invalid to be dictionary"
+            )
 
     return file_contents
 

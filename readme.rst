@@ -18,7 +18,6 @@ A deserialized, typehinted contents of the JSON file is:
         "revision_date": str,
         "contents": {
             "<keyword>": {
-                "case_sensitive": bool,
                 "definitions": list[str],
                 "references": list[str]
             },
@@ -36,7 +35,7 @@ Usage
 
 As of now, it is useful only if it was used through an interactive shell. To use the dictionary, import ``Dictionary`` from ``dictionary.main``.
 
-Note that deleting a key and its value through the ``pop`` method or using the ``del`` keyword won't work to avoid data deletion. If one needs to delete the key, use the ``remove`` method. However, it is possible to delete the keys of a key of the dictionary, like ``del Dictionary(path)['keyword']['references']`` as the type of the value of the dictionary keys is ``dict`` and the deletion methods are not overridden. Please keep this in mind.
+Note that deleting a key and its value through the ``pop`` method or using the ``del`` keyword won't work to avoid data deletion. If one needs to delete the key, use the ``remove`` method. However, it is possible to delete the keys of a key of the dictionary, like ``del Dictionary(path)[keyword]['references']`` as the type of the value of the dictionary keys is ``dict`` and the deletion methods are not overridden. Please keep this in mind.
 
 Methods
 -------
@@ -47,7 +46,7 @@ Methods
 |      ``save``      | Saves the current copy of the      |
 |                    | dictionary to the associated file. |
 +--------------------+------------------------------------+
-|  ``definition_of`` | Returns the definitions of a       |
+| ``information_on`` | Returns information of a           |
 |                    | keyword from the dictionary, if it |
 |                    | exists.                            |
 +--------------------+------------------------------------+

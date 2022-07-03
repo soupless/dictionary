@@ -12,9 +12,19 @@ from . import file_ops
 
 
 class SearchMode(Enum):
+    """Search modes for the ``search`` method of the class ``Dictionary``."""
+
     Exact = 0
     SubStr = 1
     Approx = 2
+
+
+class InfoType(Enum):
+    """Information types for the ``information_on`` method of the class
+    ``Dictionary``."""
+
+    Definitions = 0
+    References = 1
 
 
 class Dictionary(dict):
@@ -77,6 +87,30 @@ class Dictionary(dict):
         avoid data destruction."""
         logging.warning(f"Attempted to use __delitem__ on {self.path}")
         raise NotImplementedError
+
+    def pop(self, __k, __d=None) -> Any:
+        """An invalidation of the inherited ``pop`` method to avoid data
+        destruction."""
+
+        raise NotImplementedError
+
+    def __setitem__(self, __k, __v) -> None:
+        def validate_kwcontent(__v: dict[Any, Any]) -> bool:
+            VALID_KEYS = ("definitions", "references")
+            return all(key in VALID_KEYS for key in __v) and all(
+                key in __v for key in VALID_KEYS
+            )
+
+        if not isinstance(__k, str):
+            raise NotImplementedError
+
+        if __k in self:
+            raise NotImplementedError
+        else:
+            if validate_kwcontent(__v):
+                super().__setitem__(__k, __v)
+            else:
+                raise NotImplementedError
 
     def popitem(self) -> tuple[str, Any]:
         """An invalidation of the inherited ``popitem`` method to avoid data
@@ -144,21 +178,27 @@ class Dictionary(dict):
         self.__edited = False
         logging.info(f"Saved {Path(self.path).parts[-1]}.")
 
-    def definition_of(self, keyword: str) -> list[str] | None:
-        """Returns the list of definitions for a given keyword, if it exists.
+    def information_on(
+        self, keyword: str, about: InfoType
+    ) -> list[str] | None:
+        """Returns the information requested for a given keyword, if it exists.
 
         Parameters
         ----------
         keyword : str
             The string to be searched.
+        about : InfoType
+            The type of information requested from the given keyword.
 
         Returns
         -------
-        list[str] | None
-            The list of the definitions if the keyword exists, otherwise None
+        list[str] | bool | None
+            Returns a value of type ``list[str]`` if definitions or references
+            are requested, or ``bool`` if the case-sensitivity of the keyword
+            is requested. Otherwise, ``None`` is returned.
         """
         if keyword in self:
-            return self[keyword]["definitions"]
+            return self[keyword][about.name.lower()]
         return None
 
     def add(
@@ -166,13 +206,9 @@ class Dictionary(dict):
         keyword: str,
         definition: str = "",
         reference: str = "",
-        case_sensitive: bool = False,
     ) -> None:
         """Adds content to the dictionary. If the keyword already exists, the
         given definition and/or reference will be added instead.
-
-        The parameter ``case_sensitive`` will only be used if the keyword
-        doesn't exist.
 
         Parameters
         ----------
@@ -182,9 +218,6 @@ class Dictionary(dict):
             The definition of the keyword, by default ``''``
         reference : str, optional
             The reference of the keyword, by default ``''``
-        case_sensitive : bool, optional
-            The case sensitivity of the keyword used only when adding a
-            nonexistent keyword, by default ``False``
         """
 
         if not (definition or reference):
@@ -192,22 +225,22 @@ class Dictionary(dict):
 
         if keyword in self:
             if definition:
-                self["keyword"]["definitions"].append(definition)
+                self[keyword]["definitions"].append(definition)
                 logging.info(
                     f"Added the definition '{definition}' to the keyword"
                     f" '{keyword}'."
                 )
             if reference:
-                self["keyword"]["references"].append(reference)
+                self[keyword]["references"].append(reference)
                 logging.info(
-                    f"Added the reference '{reference}' to the keyword" f" '{keyword}'."
+                    f"Added the reference '{reference}' to the keyword"
+                    f" '{keyword}'."
                 )
 
         else:
             new_definitions = [definition] if definition else []
             new_references = [reference] if reference else []
             new_entry: dict[str, bool | list[str]] = {
-                "case_sensitive": case_sensitive,
                 "definitions": new_definitions,
                 "references": new_references,
             }
@@ -223,7 +256,9 @@ class Dictionary(dict):
 
         self.__edited = True
 
-    def remove(self, keyword: str, definition: str = "", reference: str = "") -> None:
+    def remove(
+        self, keyword: str, definition: str = "", reference: str = ""
+    ) -> None:
         """Removes content from the dictionary.
 
         If both definition and reference passed are blank, the keyword itself
@@ -247,16 +282,17 @@ class Dictionary(dict):
         if keyword not in self:
             raise ValueError("Nonexistent entry to be removed")
 
-        if definition:
-            if definition in self[keyword]["definitions"]:
-                self[keyword]["definitions"].remove(definition)
-            else:
-                raise ValueError("Given definition not found")
-        elif reference:
-            if reference in self[keyword]["references"]:
-                self[keyword]["references"].remove(reference)
-            else:
-                raise ValueError("Given reference not found")
+        if definition or reference:
+            if definition:
+                if definition in self[keyword]["definitions"]:
+                    self[keyword]["definitions"].remove(definition)
+                else:
+                    raise ValueError("Given definition not found")
+            if reference:
+                if reference in self[keyword]["references"]:
+                    self[keyword]["references"].remove(reference)
+                else:
+                    raise ValueError("Given reference not found")
         else:
             super().__delitem__(keyword)
 
@@ -290,7 +326,7 @@ class Dictionary(dict):
                 (key, damerau_levenshtein_distance(keyword, key))
                 for key in self
                 if regex.search(key)
-            ][: max_results + 1]
+            ][: max_results]
 
         elif mode == SearchMode.Approx:
             search_result = [
@@ -301,7 +337,7 @@ class Dictionary(dict):
                     ),
                 )
                 for key in self
-            ][: max_results + 1]
+            ][: max_results]
 
         if search_result is not None:
             search_result.sort(key=lambda t: t[1])
