@@ -2,7 +2,15 @@
 dictionary
 ==========
 
-A package that allows you to create and use a dictionary saved as a JSON file.
+.. image :: https://github.com/soupless/dictionary-alt/actions/workflows/tests.yml/badge.svg?style=flat
+    :target: https://github.com/soupless/dictionary-alt/actions/workflows/tests.yml
+
+.. image :: https://img.shields.io/badge/license-MIT-blue.svg?style=flat
+    :alt: MIT License
+    :target: http://choosealicense.com/licenses/mit/
+
+| 
+| A package that allows you to create and use a dictionary saved as a JSON file.
 
 What does the dictionary file look like?
 ----------------------------------------
@@ -32,6 +40,14 @@ After processing the file, the ``Dictionary`` class only takes the ``contents`` 
 
 Usage
 -----
+
+This package is compatible from Python 3.8 to Python 3.10.
+
+To install, run
+
+.. code-block :: console
+
+    pip install https://github.com/soupless/dictionary.git
 
 As of now, it is useful only if it was used through an interactive shell. To use the dictionary, import ``Dictionary`` from ``dictionary.main``.
 

@@ -1,7 +1,27 @@
-.venv
-build
-.mypy_cache
-src/dictionary.egg-info/
+# Editor configs
+.vscode/
+
+# Virtual environment
+.venv/
+
+# Testing files
+.mypy_cache/
+.pytest_cache/
+.tox
+
+# Compiled python code
+build/
 src/dictionary/__pycache__/
-test
-.vscode
+tests/__pycache__/
+
+# Metadata
+src/dictionary.egg-info/
+
+# Test-generated files
+dict-test.json
+dict-test2.json
+dict-test3.json
+
+# Code coverage report
+.coverage
+htmlcov/

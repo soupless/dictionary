@@ -1,3 +1,17 @@
 [build-system]
 requires = ["setuptools>=58.1", "wheel"]
 build-backend = "setuptools.build_meta"
+
+[tool.pytest.ini_options]
+addopts = [
+    "-vv", 
+    "--cov=dictionary", 
+    "--cov-report=term-missing", 
+    "--cov-report=html"
+]
+testpaths = [
+    "tests",
+]
+
+[tool.mypy]
+mypy_path = "src"

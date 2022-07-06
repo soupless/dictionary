@@ -1,2 +1,5 @@
 mypy>=0.942
 flake8>=3.10
+pytest>=7.0.0
+pytest-cov>=2.0
+tox>=3.24.0

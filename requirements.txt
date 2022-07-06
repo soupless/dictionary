@@ -1,1 +1,1 @@
-jellyfish==0.90
+jellyfish>=0.90
