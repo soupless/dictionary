@@ -2,8 +2,8 @@
 dictionary
 ==========
 
-.. image :: https://github.com/soupless/dictionary-alt/actions/workflows/tests.yml/badge.svg?style=flat
-    :target: https://github.com/soupless/dictionary-alt/actions/workflows/tests.yml
+.. image :: https://github.com/soupless/dictionary/actions/workflows/tests.yml/badge.svg?style=flat
+    :target: https://github.com/soupless/dictionary/actions/workflows/tests.yml
 
 .. image :: https://img.shields.io/badge/license-MIT-blue.svg?style=flat
     :alt: MIT License
@@ -78,6 +78,33 @@ Methods
 |     ``remove``     | Removes content from the current   |
 |                    | copy of the dictionary.            |
 +--------------------+------------------------------------+
+|    ``edit_meta``   | Edits the metadata of the          |
+|                    | dictionary.                        |
++--------------------+------------------------------------+
+
+Enums
+-----
+
++--------------------+------------------------------------+
+|      Enum Name     |             Description            |
++====================+====================================+
+|   ``SearchMode``   | Used in the ``search`` method      |
+|                    | to specify the search mode.        |
+|                    | Possible values are ``Exact``,     |
+|                    | ``SubStr``, and ``Approx``.        |
++--------------------+------------------------------------+
+|    ``InfoType``    | Used in the ``information_on``     |
+|                    | method to specify the type of      |
+|                    | information. Possible values are   |
+|                    | ``Definitions`` and ``References``.|
++--------------------+------------------------------------+
+|     ``MDType``    | Used in the ``edit_meta`` method   |
+|                    | to specify which metadata field to |
+|                    | edit. Possible values are          |
+|                    | ``Title``, ``Author``, and         |
+|                    | ``Description``.                   |
++--------------------+------------------------------------+
+
 
 Properties
 ----------

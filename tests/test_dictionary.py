@@ -1,7 +1,7 @@
 import json
 import pytest
 
-from dictionary.main import Dictionary, InfoType, SearchMode
+from dictionary.main import Dictionary, InfoType, MDType, SearchMode
 from dictionary.file_ops import NotADictionaryError, read_json, time, date_time
 from datetime import date as date_
 from pathlib import Path
@@ -11,7 +11,7 @@ if file.exists():
     file.unlink()
 
 test_dict = Dictionary("dict-test.json", "title", "author", "description")
-
+test_dict.save()
 
 
 with open('dict-test2.json', 'w') as f:
@@ -40,7 +40,7 @@ def test_new():
     assert test_dict.path == "dict-test.json"
     assert not test_dict.edited
 
-    # This might be a problem, although it's a very small
+    # This might be a problem, although it's a very small chance
     assert test_dict.revision_date == str(date_.today())
 
 
@@ -72,43 +72,40 @@ def test_add():
     with pytest.raises(ValueError):
         test_dict.add('new')
 
+    test_dict.save()
+
 
 def test_save():
-    test_dict.save()
     assert file.exists()
     with open("dict-test.json") as f:
         assert test_dict._convert_to_dict() == json.load(f)
-
 
 def test_search():
     for i in ("keyword", "keywords", "keyswords", "keywords1", "keyswords1"):
         test_dict.add(i, "definition1", "reference1")
 
     assert test_dict.search("keyword") == [
-        ("keyword", 0),
-        ("keyword1", 1),
-        ("keywords", 1),
-        ("keyswords", 2),
-        ("keywords1", 2),
+        "keyword",
+        "keyword1",
+        "keywords",
+        "keywords1",
+        "keyswords"
     ]
-
+    
     assert test_dict.search("keyword", mode=SearchMode.SubStr) == [
-        ("keyword", 0),
-        ("keyword1", 1),
-        ("keywords", 1),
-        ("keywords1", 2),
+        "keyword",
+        "keyword1",
+        "keywords",
+        "keywords1",
     ]
 
-    assert test_dict.search("keyword", mode=SearchMode.Exact) == [
-        ("keyword", 0)
-    ]
+    assert test_dict.search("keyword", mode=SearchMode.Exact) == ["keyword"]
 
     with pytest.raises(ValueError):
         test_dict.search("keyword", max_results=0)
 
     new_dict = Dictionary('temp.json', 'title', 'author', 'description')
-    assert new_dict.search('keyword') is None
-
+    assert new_dict.search('keyword') == []
 
 def test_information_on():
     assert test_dict.information_on("keyword", InfoType.Definitions) == [
@@ -200,6 +197,24 @@ def test_file_validation():
         Dictionary('src/')
 
     assert Dictionary('dict-test2.json')
+
+
+def test_edit_meta():
+    test_dict.edit_meta(MDType.Title, 'new_title')
+    assert test_dict.title == 'new_title'
+    assert test_dict.edited
+
+def test_final_act():
+    list_of_files = (
+    "dict-test.json", 
+    "dict-test2.json", 
+    "dict-test3.json", 
+    "dict_test.log", 
+    "dict-test2.log")
+
+    for file in list_of_files:
+        if Path(file).exists():
+            Path(file).unlink()
 
     # For the sake of code coverage
     assert time()

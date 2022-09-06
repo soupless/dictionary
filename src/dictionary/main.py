@@ -1,11 +1,11 @@
 from __future__ import annotations
-from enum import Enum
 
 import logging
 import re
-from typing import Any
+from enum import Enum
+from os.path import commonprefix
 from pathlib import Path
-
+from typing import Any
 from jellyfish import damerau_levenshtein_distance
 
 from . import file_ops
@@ -25,6 +25,15 @@ class InfoType(Enum):
 
     Definitions = 0
     References = 1
+
+
+class MDType(Enum):
+    """Metadata types for the ``edit_meta`` method of the class ``Dictionary``.
+    """
+
+    Title = 0
+    Author = 1
+    Description = 2
 
 
 class Dictionary(dict):
@@ -107,7 +116,7 @@ class Dictionary(dict):
         if __k in self:
             raise NotImplementedError
         else:
-            if validate_kwcontent(__v):
+            if validate_kwcontent(__v):  # type: ignore
                 super().__setitem__(__k, __v)
             else:
                 raise NotImplementedError
@@ -244,7 +253,7 @@ class Dictionary(dict):
                 "definitions": new_definitions,
                 "references": new_references,
             }
-            self[keyword] = new_entry
+            self[keyword] = new_entry  # type: ignore
 
             logging.info(f"Added the keyword '{keyword}' to the dictionary.")
 
@@ -304,42 +313,98 @@ class Dictionary(dict):
         case_sensitive: bool = False,
         mode: SearchMode = SearchMode.Approx,
         max_results: int = 5,
-    ) -> list[tuple[str, int]] | None:
+    ) -> list[str]:
+        """Searches for keywords following a search mode.
 
-        search_result: list[tuple[str, int]] | None = None
+        Parameters
+        ----------
+        keyword : str
+            The string query
+        case_sensitive : bool, optional
+            Case sensitivity of the search, by default False
+        mode : SearchMode, optional
+            The search mode implemented, by default SearchMode.Approx
+        max_results : int, optional
+            The maximum number of results returned, by default 5
+
+        Returns
+        -------
+        dict[int, list[str]]
+            A dict with edit distances as keys and the words with given
+            distance saved in a list as the value of given key.
+
+        Raises
+        ------
+        ValueError
+            If ``max_results`` passed is less than 1.
+        """
+        def longest_common_prefix(str1: str, str2: str) -> int:
+            return len(commonprefix((str1, str2)))
+
+        temp_results: dict[int, list[str]] = {}
+        search_results: list[str] = []
+
+        def dist_process(rx_pat: re.Pattern | None = None):
+            cond: Any
+
+            def true_v(_: Any) -> bool:
+                return True
+
+            cond = rx_pat.search if isinstance(rx_pat, re.Pattern) else true_v
+
+            for key in self:
+                if cond(key):
+                    dist = damerau_levenshtein_distance(
+                        keyword, key if case_sensitive else key.lower()
+                    )
+                    temp_results.setdefault(dist, [])
+                    temp_results[dist].append(key)
 
         if max_results < 1:
             raise ValueError("Invalid number of maximum results")
         if not self:
-            return None
+            return []
 
         keyword = keyword if case_sensitive else keyword.lower()
 
         if mode == SearchMode.Exact:
             if keyword in (self if case_sensitive else map(str.lower, self)):
-                return [(keyword, 0)]
+                return [keyword]
 
         elif mode == SearchMode.SubStr:
-            regex = re.compile(keyword if case_sensitive else f"(?i){keyword}")
-
-            search_result = [
-                (key, damerau_levenshtein_distance(keyword, key))
-                for key in self
-                if regex.search(key)
-            ][: max_results]
+            dist_process(
+                re.compile(keyword if case_sensitive else f"(?i){keyword}")
+            )
 
         elif mode == SearchMode.Approx:
-            search_result = [
-                (
-                    key,
-                    damerau_levenshtein_distance(
-                        keyword, key if case_sensitive else key.lower()
-                    ),
-                )
-                for key in self
-            ][: max_results]
+            dist_process()
 
-        if search_result is not None:
-            search_result.sort(key=lambda t: t[1])
+        temp_results = dict(sorted(temp_results.items()))
+        count = max_results
+        for v in temp_results.values():
+            v.sort(
+                key=lambda term: longest_common_prefix(
+                    keyword, term if case_sensitive else term.lower()
+                ),
+                reverse=True
+            )
+            if count >= len(v):
+                search_results += v
+                count -= len(v)
+            else:
+                search_results += v[:count]
+                break
+        return search_results
 
-        return search_result
+    def edit_meta(self, meta: MDType, new_value: str) -> None:
+        """Edits the metadata of the dictionary.
+
+        Parameters
+        ----------
+        meta : MDType
+            The type of metadata to be edited.
+        new_value : str
+            The new value to be set.
+        """
+        setattr(self, f"_Dictionary__{meta.name.lower()}", new_value)
+        self.__edited = True
